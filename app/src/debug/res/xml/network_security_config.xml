@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-Ueberschreibung: der interne Sideload-Build spricht das Gateway in
+  Phase 1 als HTTP ueber VPN an. Klartext ist deshalb NUR hier (debuggable)
+  erlaubt. Zusaetzlich werden user-CAs vertraut, damit lokale Test-Gateways mit
+  eigener CA ohne Geraete-Root funktionieren. Release-Builds erben diese Datei
+  NICHT (siehe src/main/res/xml/network_security_config.xml).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

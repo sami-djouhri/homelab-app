@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cloud-Backup und Geraete-Transfer duerfen die App-Auth NICHT mitnehmen.
+  Der DataStore (jwt_token, device_id, Zertifikate) bleibt ausgeschlossen; der
+  private Geraeteschluessel liegt ohnehin non-exportable im AndroidKeyStore.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datastore/" />
+        <exclude domain="sharedpref" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="datastore/" />
+        <exclude domain="sharedpref" path="." />
+    </device-transfer>
+</data-extraction-rules>

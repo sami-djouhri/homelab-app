@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Transportsicherheit (siehe docs/SECURITY.md).
+
+  Basis-Regel fuer Release-Builds: Klartext-HTTP ist global VERBOTEN. Der
+  produktiv verteilte Release-Build spricht das Gateway nur ueber TLS an
+  (nginx-Edge mit Server-Cert + optionalem mTLS, Phase 2).
+
+  Der interne Debug-Build (Sideload ueber das Gateway) laeuft in Phase 1 als
+  HTTP ueber ein VPN. Klartext wird deshalb NUR in debuggable Builds erlaubt -
+  ueber die Ressourcen-Ueberschreibung in src/debug/res/xml/. So kann kein
+  Release-Artefakt versehentlich unverschluesselt gegen einen fremden Host reden.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

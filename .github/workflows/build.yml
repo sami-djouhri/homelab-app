@@ -1,0 +1,54 @@
+name: CI
+
+# Kompiliert die App, laesst die Unit-Tests und Android-Lint laufen und legt das
+# Debug-APK als Nachweis ab. Es wird BEWUSST kein GitHub-Release erzeugt: das
+# Debug-APK ist unsigniert und nur ein Build-Nachweis. Der signierte Release-Build
+# entsteht in der internen Verteil-Pipeline (siehe docs/ARCHITECTURE.md).
+#
+# Die Gateway-Adresse bleibt der eingecheckte Loopback-Platzhalter
+# (siehe app/build.gradle.kts) - das oeffentliche Artefakt enthaelt keine realen
+# Netzdetails.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit-Tests
+        run: ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Android-Lint
+        run: ./gradlew --no-daemon lintDebug
+
+      - name: Debug-APK bauen (Kompilier-Nachweis)
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Debug-APK ablegen (unsigniert, nur zum Testen)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cockpit-debug-unsigned
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Lint-Report ablegen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.html
