@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Transportsicherheit (siehe docs/SECURITY.md).
+
+  Basis-Regel: Klartext-HTTP ist VERBOTEN. Wer das Gateway ueber TLS erreicht,
+  faellt unter diese Regel und bekommt keine Ausnahme.
+
+  Die eine Ausnahme ist die Adresse des VPN-Endpunkts. Sie ist bewusst als
+  einzelne Adresse eingetragen, nicht als Praefix und nicht global:
+
+  - Es ist die Innenseite des WireGuard-Tunnels. Der Verkehr dorthin verlaesst
+    das Geraet bereits verschluesselt; ein zweiter Umschlag darum schuetzt
+    gegen niemanden, der nicht schon im Tunnel sitzt.
+  - Die Adresse ist nicht routbar. Ohne aktiven Tunnel geht dorthin nichts,
+    auch nicht versehentlich in ein fremdes WLAN.
+  - `includeSubdomains` gibt es fuer eine IP nicht, und eine zweite Adresse
+    steht hier nicht. Ein Release-Artefakt kann damit weiterhin nicht
+    unverschluesselt gegen einen fremden Host reden, und genau das war der
+    Zweck der frueheren Pauschal-Sperre.
+
+  Vorher galt die Sperre pauschal. Praktisch hiess das nicht „mehr Sicherheit",
+  sondern „der Release-Build kann das Gateway nicht erreichen", weshalb
+  ausschliesslich Debug-Artefakte verteilt wurden: 98 MB, debuggable, ohne R8.
+  Die enge Ausnahme ist die schwaechere Regel und trotzdem der bessere Zustand.
+
+  Zieht das Gateway auf TLS um, gehoert dieser Block ersatzlos raus.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.0.2.10</domain>
+    </domain-config>
+</network-security-config>
