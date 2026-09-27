@@ -23,9 +23,13 @@ val gatewayUrl: String = (project.findProperty("cockpit.gatewayUrl") as String?)
     ?: System.getenv("COCKPIT_GATEWAY_URL")?.takeIf { it.isNotBlank() }
     ?: "http://127.0.0.1:8140"
 
+// ⚠ Der Vorgabewert muss dem zuletzt ausgelieferten Stand entsprechen, nicht
+// irgendeiner alten Zahl. Er stand bis 2026-09-27 auf 2, waehrend ausgeliefert
+// war 4: ein Bau ohne gesetzte Property haette ein Downgrade erzeugt, das
+// Android wortlos ablehnt und das wie ein kaputtes Update aussieht.
 val cockpitVersionCode: Int = (project.findProperty("cockpit.versionCode") as String?)?.toIntOrNull()
     ?: System.getenv("COCKPIT_VERSION_CODE")?.toIntOrNull()
-    ?: 2
+    ?: 5
 
 android {
     namespace = "de.djouhri.cockpit"

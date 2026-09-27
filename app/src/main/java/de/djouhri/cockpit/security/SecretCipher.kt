@@ -72,7 +72,7 @@ class SecretCipher @Inject constructor() {
             val parts = stored.split(":", limit = 3)
             require(parts.size == 3 && parts[0] == PREFIX) { "unbekanntes Ciphertext-Format" }
             val iv = unb64(parts[1])
-            require(iv.size == IV_BYTES) { "ungueltige IV-Laenge" }
+            require(iv.size == IV_BYTES) { "ungültige IV-Länge" }
             val ciphertext = unb64(parts[2])
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(GCM_TAG_BITS, iv))

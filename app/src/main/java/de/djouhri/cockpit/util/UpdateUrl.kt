@@ -17,7 +17,7 @@ object UpdateUrl {
 
     fun resolve(gateway: String, apkUrl: String): Result<String> = runCatching {
         val base = gateway.toHttpUrlOrNull()
-            ?: throw IllegalArgumentException("Gateway-URL ungueltig")
+            ?: throw IllegalArgumentException("Gateway-URL ungültig")
 
         val trimmed = apkUrl.trim()
         require(trimmed.isNotEmpty()) { "Leere APK-URL" }
@@ -25,9 +25,9 @@ object UpdateUrl {
         val resolved: HttpUrl = if (trimmed.startsWith("http://", ignoreCase = true) ||
             trimmed.startsWith("https://", ignoreCase = true)
         ) {
-            trimmed.toHttpUrlOrNull() ?: throw IllegalArgumentException("APK-URL ungueltig")
+            trimmed.toHttpUrlOrNull() ?: throw IllegalArgumentException("APK-URL ungültig")
         } else {
-            base.resolve(trimmed) ?: throw IllegalArgumentException("APK-Pfad nicht aufloesbar")
+            base.resolve(trimmed) ?: throw IllegalArgumentException("APK-Pfad nicht auflösbar")
         }
 
         require(

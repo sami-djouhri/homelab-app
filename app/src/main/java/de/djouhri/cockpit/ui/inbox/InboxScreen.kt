@@ -145,7 +145,7 @@ fun InboxScreen(viewModel: InboxViewModel = hiltViewModel()) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            "${state.counts.open} offen · ${state.counts.snoozed} zurueckgestellt",
+                            "${state.counts.open} offen · ${state.counts.snoozed} zurückgestellt",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -233,7 +233,7 @@ private fun InboxCard(
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = onDone) { Text("Erledigt") }
-                TextButton(onClick = onSnooze) { Text("Spaeter") }
+                TextButton(onClick = onSnooze) { Text("Später") }
                 TextButton(onClick = onArchive) { Text("Archiv") }
             }
         }

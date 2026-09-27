@@ -6,11 +6,11 @@ import java.io.IOException
 fun Throwable.userMessage(): String = when (this) {
     is IOException -> "Netzwerkfehler. Ist das VPN aktiv?"
     is HttpException -> when (code()) {
-        401 -> "Nicht autorisiert. Bitte Geraet erneut koppeln."
+        401 -> "Nicht autorisiert. Bitte Gerät erneut koppeln."
         403 -> "Zugriff verweigert."
         404 -> "Nicht gefunden."
-        422 -> "Ungueltige Daten."
-        in 500..599 -> "Serverfehler. Bitte spaeter erneut versuchen."
+        422 -> "Ungültige Daten."
+        in 500..599 -> "Serverfehler. Bitte später erneut versuchen."
         else -> "Fehler: ${code()} ${message()}"
     }
     else -> message ?: "Unbekannter Fehler"

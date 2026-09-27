@@ -5,6 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -41,6 +43,8 @@ class SettingsStore @Inject constructor(
         private val KEY_CA_FINGERPRINT = stringPreferencesKey("ca_fingerprint")
         private val KEY_GATEWAY_URL = stringPreferencesKey("gateway_url")
         private val KEY_REQUIRE_ACTION_CONFIRM = booleanPreferencesKey("require_action_confirm")
+        private val KEY_LETZTE_UPDATE_PRUEFUNG = longPreferencesKey("letzte_update_pruefung")
+        private val KEY_UEBERSPRUNGENE_VERSION = intPreferencesKey("uebersprungene_version")
     }
 
     /** true, sobald ein (verschluesseltes) Token vorliegt - ohne es zu entschluesseln. */
@@ -84,6 +88,28 @@ class SettingsStore @Inject constructor(
 
     suspend fun setRequireActionConfirm(enabled: Boolean) {
         context.dataStore.edit { it[KEY_REQUIRE_ACTION_CONFIRM] = enabled }
+    }
+
+    /** Wann zuletzt selbsttaetig nach einem Update gesehen wurde (epoch ms, 0 = nie). */
+    suspend fun letzteUpdatePruefung(): Long =
+        context.dataStore.data.first()[KEY_LETZTE_UPDATE_PRUEFUNG] ?: 0L
+
+    suspend fun setLetzteUpdatePruefung(zeitpunkt: Long) {
+        context.dataStore.edit { it[KEY_LETZTE_UPDATE_PRUEFUNG] = zeitpunkt }
+    }
+
+    /**
+     * Nummer einer Version, die der Nutzer weggetippt hat.
+     *
+     * Ohne das kaeme derselbe Hinweis bei jedem Start wieder, und ein Hinweis,
+     * den man taeglich wegwischt, wird irgendwann auch dann weggewischt, wenn
+     * er wichtig ist. Die naechsthoehere Nummer meldet sich wieder.
+     */
+    val uebersprungeneVersion: Flow<Int> =
+        context.dataStore.data.map { it[KEY_UEBERSPRUNGENE_VERSION] ?: 0 }
+
+    suspend fun setUebersprungeneVersion(versionCode: Int) {
+        context.dataStore.edit { it[KEY_UEBERSPRUNGENE_VERSION] = versionCode }
     }
 
     /** Loescht saemtliche Auth-Artefakte aus dem DataStore (Keystore-Alias raeumt der Aufrufer). */

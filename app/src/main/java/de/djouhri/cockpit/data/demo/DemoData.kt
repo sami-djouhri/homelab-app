@@ -100,7 +100,7 @@ object DemoData {
         InboxItem(
             externalId = "demo-3",
             source = "cert",
-            title = "TLS-Zertifikat laeuft in 12 Tagen ab",
+            title = "TLS-Zertifikat läuft in 12 Tagen ab",
             detail = "status.example.org - Auto-Renewal aktiv, nur zur Info.",
             severity = "info",
             ageHours = 20.0,

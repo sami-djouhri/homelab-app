@@ -57,8 +57,8 @@ import javax.inject.Inject
 /** Womit die Liste eingeschraenkt wird. */
 enum class ServiceFilter(val titel: String) {
     ALLE("Alle"),
-    AUFFAELLIG("Auffaellig"),
-    LAEUFT("Laeuft"),
+    AUFFAELLIG("Auffällig"),
+    LAEUFT("Läuft"),
     AUS("Aus"),
 }
 
@@ -250,7 +250,7 @@ private fun Filterleiste(state: ServicesUiState, viewModel: ServicesViewModel) {
             trailingIcon = {
                 if (state.suche.isNotEmpty()) {
                     IconButton(onClick = { viewModel.setzeSuche("") }) {
-                        Icon(Icons.Filled.Close, contentDescription = "Suche loeschen")
+                        Icon(Icons.Filled.Close, contentDescription = "Suche löschen")
                     }
                 }
             },

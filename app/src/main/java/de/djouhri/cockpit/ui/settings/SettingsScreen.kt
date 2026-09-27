@@ -1,7 +1,5 @@
 package de.djouhri.cockpit.ui.settings
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,21 +27,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.djouhri.cockpit.BuildConfig
 import de.djouhri.cockpit.data.local.SettingsStore
-import de.djouhri.cockpit.data.model.cockpit.AppVersion
-import de.djouhri.cockpit.data.repository.DashboardRepository
 import de.djouhri.cockpit.data.repository.PairingRepository
-import de.djouhri.cockpit.security.SessionState
 import de.djouhri.cockpit.ui.theme.StatusDown
 import de.djouhri.cockpit.ui.theme.StatusUp
-import de.djouhri.cockpit.util.UpdateUrl
+import de.djouhri.cockpit.ui.update.UpdateViewModel
 import de.djouhri.cockpit.util.userMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -59,18 +52,13 @@ data class SettingsUiState(
     val connectionResult: String? = null,
     val connectionOk: Boolean = false,
     val checkingConnection: Boolean = false,
-    val checkingUpdate: Boolean = false,
-    val updateAvailable: AppVersion? = null,
-    val updateChecked: Boolean = false,
     val error: String? = null,
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val pairingRepository: PairingRepository,
-    private val dashboardRepository: DashboardRepository,
     private val settingsStore: SettingsStore,
-    private val sessionState: SessionState,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsUiState())
@@ -84,14 +72,6 @@ class SettingsViewModel @Inject constructor(
             _state.update { it.copy(deviceId = settingsStore.getDeviceId()) }
         }
     }
-
-    /**
-     * Loest die APK-URL gegen das gekoppelte Gateway auf und validiert die
-     * Herkunft (siehe [UpdateUrl]). Fremd-Hosts / Schema-Downgrades werden
-     * abgelehnt, bevor die URL ans System uebergeben wird.
-     */
-    fun resolveUpdateUrl(apkUrl: String): Result<String> =
-        UpdateUrl.resolve(sessionState.gatewayBaseUrl(), apkUrl)
 
     fun setRequireActionConfirm(enabled: Boolean) {
         viewModelScope.launch { settingsStore.setRequireActionConfirm(enabled) }
@@ -111,39 +91,20 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun checkUpdate() {
-        viewModelScope.launch {
-            _state.update { it.copy(checkingUpdate = true, error = null, updateChecked = false) }
-            dashboardRepository.latestVersion().fold(
-                onSuccess = { version ->
-                    val newer = version.versionCode > BuildConfig.VERSION_CODE
-                    _state.update {
-                        it.copy(
-                            checkingUpdate = false,
-                            updateChecked = true,
-                            updateAvailable = if (newer) version else null,
-                        )
-                    }
-                },
-                onFailure = { error ->
-                    _state.update { it.copy(checkingUpdate = false, error = error.userMessage()) }
-                },
-            )
-        }
-    }
-
     fun unpair() {
         viewModelScope.launch { pairingRepository.unpair() }
     }
 }
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel = hiltViewModel(),
+    updateViewModel: UpdateViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsState()
+    val updateState by updateViewModel.state.collectAsState()
     val requireActionConfirm by viewModel.requireActionConfirm.collectAsState()
-    val context = LocalContext.current
     var confirmUnpair by remember { mutableStateOf(false) }
-    var updateError by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -154,7 +115,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Geraet", style = MaterialTheme.typography.titleMedium)
+                Text("Gerät", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "Gekoppelt · ID ${state.deviceId?.take(12) ?: "–"}",
@@ -182,17 +143,24 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 Text("Version", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    updateState.installierteVersion,
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Die App sieht alle sechs Stunden selbst nach und meldet sich oben, " +
+                        "wenn etwas bereitliegt. Hier kann man es erzwingen.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(10.dp))
                 OutlinedButton(
-                    onClick = { viewModel.checkUpdate() },
-                    enabled = !state.checkingUpdate,
-                ) { Text(if (state.checkingUpdate) "Pruefe…" else "Auf Updates pruefen") }
+                    onClick = { updateViewModel.pruefe() },
+                    enabled = !updateState.prueftGerade,
+                ) { Text(if (updateState.prueftGerade) "Prüfe…" else "Jetzt nachsehen") }
 
-                val update = state.updateAvailable
+                val update = updateState.angeboten
                 when {
                     update != null -> {
                         Spacer(Modifier.height(10.dp))
@@ -214,23 +182,29 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                             )
                         }
                         Spacer(Modifier.height(6.dp))
-                        Button(onClick = {
-                            updateError = null
-                            viewModel.resolveUpdateUrl(update.apkUrl).fold(
-                                onSuccess = { url ->
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                                },
-                                onFailure = { updateError = "Update abgelehnt: ${it.message}" },
-                            )
-                        }) { Text("Update herunterladen") }
-                        updateError?.let {
+                        // Die Knoepfe sind dieselben wie im Banner oben, und sie
+                        // teilen sich dessen Zustand: was hier geladen wird, gilt
+                        // dort als geladen.
+                        when {
+                            updateState.laedtGerade ->
+                                Text("Wird geladen…", style = MaterialTheme.typography.bodySmall)
+                            updateState.bereit != null ->
+                                Button(onClick = { updateViewModel.installieren() }) { Text("Installieren") }
+                            else ->
+                                Button(onClick = { updateViewModel.holen() }) { Text("Herunterladen") }
+                        }
+                        updateState.fehler?.let {
                             Spacer(Modifier.height(4.dp))
                             Text(it, color = StatusDown, style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    state.updateChecked -> {
+                    updateState.geprueft -> {
                         Spacer(Modifier.height(6.dp))
-                        Text("Aktuell.", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            updateState.fehler ?: "Aktuell.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (updateState.fehler != null) StatusDown else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -243,8 +217,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                         Text("Sicherheit", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Schreibende Aktionen (Start/Stop/Restart) zusaetzlich per " +
-                                "Biometrie oder Geraete-PIN bestaetigen.",
+                            "Schreibende Aktionen (Start/Stop/Restart) zusätzlich per " +
+                                "Biometrie oder Geräte-PIN bestätigen.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -265,14 +239,14 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         OutlinedButton(
             onClick = { confirmUnpair = true },
             modifier = Modifier.fillMaxWidth(),
-        ) { Text("Geraet entkoppeln") }
+        ) { Text("Gerät entkoppeln") }
     }
 
     if (confirmUnpair) {
         AlertDialog(
             onDismissRequest = { confirmUnpair = false },
             title = { Text("Entkoppeln?") },
-            text = { Text("JWT und Zertifikate werden geloescht. Ein erneutes Pairing ist danach noetig.") },
+            text = { Text("JWT und Zertifikate werden gelöscht. Ein erneutes Pairing ist danach nötig.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmUnpair = false

@@ -139,7 +139,7 @@ class ServiceDetailViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             actionInProgress = null,
-                            message = "Aktion '$action' ausgefuehrt",
+                            message = "Aktion '$action' ausgeführt",
                         )
                     }
                     // Der Zustand kommt aus dem naechsten Abruf, nicht aus der
@@ -177,8 +177,8 @@ fun ServiceDetailScreen(
     val requestAction: (String) -> Unit = { action ->
         if (requireConfirm && deviceAuth?.canAuthenticate() == true) {
             deviceAuth.authenticate(
-                title = "Aktion bestaetigen",
-                subtitle = "'$action' fuer '${state.name}'",
+                title = "Aktion bestätigen",
+                subtitle = "'$action' für '${state.name}'",
                 onSuccess = { viewModel.performAction(action) },
             )
         } else {
@@ -282,7 +282,7 @@ private fun AktionsKarte(state: ServiceDetailUiState, requestAction: (String) ->
                         strokeWidth = 2.dp,
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text("Fuehre '${state.actionInProgress}' aus…")
+                    Text("Führe '${state.actionInProgress}' aus…")
                 }
             } else {
                 // Nur anbieten, was in der aktuellen Lage etwas bewirkt: ein

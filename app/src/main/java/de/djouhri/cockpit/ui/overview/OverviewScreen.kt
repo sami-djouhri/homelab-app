@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -48,6 +51,10 @@ import de.djouhri.cockpit.util.formatPercent
 import de.djouhri.cockpit.util.userMessage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -63,6 +70,13 @@ data class OverviewUiState(
     val probleme: List<ServiceSummary> = emptyList(),
     val health: HostHealth? = null,
     val inbox: InboxCounts = InboxCounts(),
+    /**
+     * Wann diese Zahlen zuletzt vom Gateway kamen (epoch ms, null = noch nie).
+     *
+     * Eine Uebersicht ohne Alter ist eine Behauptung: sie sieht bei einer
+     * stehenden Verbindung genauso aus wie bei einer frischen Messung.
+     */
+    val zuletzt: Long? = null,
 ) {
     val erreichbar: List<HostRollup> get() = hosts.filter { it.erreichbar }
     val nichtErreichbar: List<HostRollup> get() = hosts.filterNot { it.erreichbar }
@@ -89,13 +103,19 @@ class OverviewViewModel @Inject constructor(
     private val _state = MutableStateFlow(OverviewUiState())
     val state = _state.asStateFlow()
 
-    fun load(refresh: Boolean = false) {
+    /**
+     * @param refresh true beim Ziehen: dann dreht sich der Kringel.
+     * @param still true fuer die selbsttaetige Auffrischung. Ohne das blinkt
+     *   die Flaeche alle 30 s, und eine Oberflaeche, die von selbst zuckt,
+     *   waehrend man sie liest, ist schlechter als eine, die stillsteht.
+     */
+    fun load(refresh: Boolean = false, still: Boolean = false) {
         viewModelScope.launch {
             _state.update {
                 it.copy(
-                    loading = !refresh && it.hosts.isEmpty(),
+                    loading = !refresh && !still && it.hosts.isEmpty(),
                     refreshing = refresh,
-                    error = null,
+                    error = if (still) it.error else null,
                 )
             }
             val (hostsResult, summaryResult) = coroutineScope {
@@ -115,6 +135,7 @@ class OverviewViewModel @Inject constructor(
                             hosts = hosts,
                             health = summary?.health,
                             inbox = summary?.inboxCounts ?: it.inbox,
+                            zuletzt = System.currentTimeMillis(),
                         )
                     }
                     ladeProbleme(hosts)
@@ -160,11 +181,23 @@ class OverviewViewModel @Inject constructor(
 @Composable
 fun OverviewScreen(
     onOpenServices: () -> Unit,
+    onOpenDetail: (host: String, name: String) -> Unit,
     viewModel: OverviewViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.load() }
+    // Erst laden, dann alle 30 s still nachfassen, solange diese Flaeche
+    // sichtbar ist. Vorher stand hier der Stand vom Oeffnen der App, auch nach
+    // einer Stunde: ein Cockpit, das nicht nachsieht, meldet den Ausfall nicht,
+    // der nach dem Hinsehen passiert ist. Der Effekt endet mit der Flaeche,
+    // im Hintergrund fragt die App nichts.
+    LaunchedEffect(Unit) {
+        viewModel.load()
+        while (true) {
+            delay(30_000)
+            viewModel.load(still = true)
+        }
+    }
 
     PullToRefreshBox(
         isRefreshing = state.refreshing,
@@ -191,7 +224,7 @@ fun OverviewScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     ContainerRollupCard(state, onOpenServices)
-                    if (state.probleme.isNotEmpty()) ProblemCard(state.probleme, onOpenServices)
+                    if (state.probleme.isNotEmpty()) ProblemCard(state.probleme, onOpenServices, onOpenDetail)
                     state.health?.let { HostMetricsCard(it) }
                     InboxSummaryCard(state.inbox)
                 }
@@ -210,7 +243,7 @@ private fun ContainerRollupCard(state: OverviewUiState, onOpenServices: () -> Un
             // 93" beantwortet nicht, ob etwas zu tun ist. Genau daran hing der
             // alte Fehler, denn elf der elf gemeldeten „Probleme" waren Absicht.
             Text(
-                if (state.problemZahl == 0) "nichts auffaellig" else "${state.problemZahl} auffaellig",
+                if (state.problemZahl == 0) "nichts auffällig" else "${state.problemZahl} auffällig",
                 style = MaterialTheme.typography.headlineMedium,
                 color = if (state.problemZahl == 0) StatusUp else StatusDown,
             )
@@ -228,6 +261,13 @@ private fun ContainerRollupCard(state: OverviewUiState, onOpenServices: () -> Un
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            state.zuletzt?.let { zeitpunkt ->
+                Text(
+                    "Stand ${uhrzeit(zeitpunkt)} Uhr",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            }
 
             Spacer(Modifier.height(10.dp))
             state.erreichbar.forEach { HostZeile(it) }
@@ -253,6 +293,13 @@ private fun ContainerRollupCard(state: OverviewUiState, onOpenServices: () -> Un
     }
 }
 
+/**
+ * Uhrzeit statt "vor 3 Minuten": eine relative Angabe muesste mitlaufen, sonst
+ * altert genau die Zeile, die das Alter nennen soll.
+ */
+private fun uhrzeit(zeitpunkt: Long): String =
+    SimpleDateFormat("HH:mm", Locale.GERMANY).format(Date(zeitpunkt))
+
 @Composable
 private fun HostZeile(host: HostRollup) {
     Row(
@@ -269,7 +316,7 @@ private fun HostZeile(host: HostRollup) {
             add("${host.laufend ?: 0} laufen")
             host.bewusstAus?.takeIf { it > 0 }?.let { add("$it aus") }
             host.unbewertet?.takeIf { it > 0 }?.let { add("$it offen") }
-            if (host.problemZahl > 0) add("${host.problemZahl} auffaellig")
+            if (host.problemZahl > 0) add("${host.problemZahl} auffällig")
         }
         Text(
             teile.joinToString(" · "),
@@ -280,18 +327,29 @@ private fun HostZeile(host: HostRollup) {
 }
 
 @Composable
-private fun ProblemCard(probleme: List<ServiceSummary>, onOpenServices: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable { onOpenServices() }) {
+private fun ProblemCard(
+    probleme: List<ServiceSummary>,
+    onOpenServices: () -> Unit,
+    onOpenDetail: (host: String, name: String) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "Auffaellig (${probleme.size})",
+                "Auffällig (${probleme.size})",
                 style = MaterialTheme.typography.titleMedium,
                 color = StatusDown,
             )
             Spacer(Modifier.height(6.dp))
+            // ★ Jede Zeile fuehrt zu IHREM Dienst, nicht die Karte zur Liste.
+            // Vorher war der Weg vom Befund zu seinen Logs: Karte antippen,
+            // Liste durchsuchen, Dienst finden, oeffnen. Der Befund steht schon
+            // da, also ist er auch der Knopf.
             probleme.take(8).forEach { svc ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenDetail(svc.host, svc.name) }
+                        .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     StatusDot(color = serviceStatusColor(svc))
@@ -304,13 +362,21 @@ private fun ProblemCard(probleme: List<ServiceSummary>, onOpenServices: () -> Un
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             if (probleme.size > 8) {
                 Text(
                     "… und ${probleme.size - 8} weitere",
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 2.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable { onOpenServices() }
+                        .padding(top = 4.dp),
                 )
             }
         }
@@ -372,7 +438,7 @@ private fun InboxSummaryCard(counts: InboxCounts) {
                 Text("Offen: ${counts.open}", style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "Zurueckgestellt: ${counts.snoozed}",
+                    "Zurückgestellt: ${counts.snoozed}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -3,6 +3,14 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!--
+      Die App laedt ihr eigenes Update vom gekoppelten Gateway und uebergibt es
+      Androids Paket-Installer. Ohne diese Erlaubnis oeffnet sich der Dialog gar
+      nicht erst, und es sieht aus, als passiere beim Tippen nichts. Sie erlaubt
+      nichts Stilles: der Installer fragt selbst noch einmal, und ab Android 8
+      muss der Nutzer sie dieser App einmal ausdruecklich geben.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <uses-feature
         android:name="android.hardware.camera"
@@ -28,5 +36,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+          Reicht die geladene APK an den Installer weiter. Ein `file://`-Uri
+          waere seit Android 7 eine FileUriExposedException, also ein Absturz
+          genau im letzten Schritt. `android:exported="false"` plus die
+          Leserechte am Intent: nur der Installer sieht die Datei, und nur
+          diese eine.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

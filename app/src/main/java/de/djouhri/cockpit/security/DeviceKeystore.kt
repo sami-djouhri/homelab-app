@@ -71,7 +71,7 @@ class DeviceKeystore @Inject constructor() {
     fun buildCsrPem(commonName: String): String {
         val store = loadStore()
         val privateKey = store.getKey(ALIAS, null) as? PrivateKey
-            ?: error("Kein Geraeteschluessel im Keystore")
+            ?: error("Kein Geräteschlüssel im Keystore")
         val publicKey = store.getCertificate(ALIAS).publicKey
 
         val subject = X500Name("CN=${sanitizeCn(commonName)},OU=homelab-mobile")

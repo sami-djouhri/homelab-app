@@ -56,10 +56,23 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = OnSurfaceDark,
 )
 
+/**
+ * @param dynamicColor ★ Steht seit 2026-09-27 auf false, und das ist die
+ *   eigentliche Aenderung am Erscheinungsbild. Mit `true` ersetzt Android ab
+ *   Version 12 die gesamte Palette durch eine aus dem Hintergrundbild
+ *   abgeleitete: die hier sorgfaeltig gesetzten Farben kamen auf einem aktuellen
+ *   Telefon also nie zum Vorschein, die App sah bei jedem Hintergrundwechsel
+ *   anders aus. Schlimmer ist das bei einem Cockpit als bei einer Spiele-App,
+ *   weil Farbe hier Bedeutung traegt: der Update-Hinweis benutzt
+ *   `primaryContainer`, und wenn das je nach Wandbild rot-orange ausfaellt,
+ *   liest es sich wie eine Warnung. Die Statusfarben (gruen/gelb/rot) lagen
+ *   ohnehin fest und standen dann neben einer fremden Palette.
+ *   Zurueckdrehen ist ein Wort an dieser Stelle.
+ */
 @Composable
 fun HomelabTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

@@ -38,6 +38,9 @@ import de.djouhri.cockpit.ui.overview.OverviewScreen
 import de.djouhri.cockpit.ui.services.ServiceDetailScreen
 import de.djouhri.cockpit.ui.services.ServicesScreen
 import de.djouhri.cockpit.ui.settings.SettingsScreen
+import de.djouhri.cockpit.ui.update.UpdateBanner
+import de.djouhri.cockpit.ui.update.UpdateViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.serialization.Serializable
 
 @Serializable object OverviewRoute
@@ -53,7 +56,7 @@ private data class TopLevelDest(
 )
 
 private val topLevelDests = listOf(
-    TopLevelDest("Uebersicht", OverviewRoute, Icons.Filled.Dashboard),
+    TopLevelDest("Übersicht", OverviewRoute, Icons.Filled.Dashboard),
     TopLevelDest("Dienste", ServicesRoute, Icons.Filled.Storage),
     TopLevelDest("Inbox", InboxRoute, Icons.Filled.Inbox),
 )
@@ -88,7 +91,7 @@ fun CockpitMainScreen(
                 navigationIcon = {
                     if (!isTopLevel) {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurueck")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
                         }
                     }
                 },
@@ -127,6 +130,15 @@ fun CockpitMainScreen(
         },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
+            // Hier erzeugt, nicht in den Zielen: so teilen Banner und
+            // Einstellungen denselben Stand (der Besitzer ist die Activity,
+            // nicht ein einzelner Navigationseintrag). Sonst prueft jede
+            // Flaeche fuer sich, und die eine zeigt ein Update an, das die
+            // andere schon geladen hat.
+            val updateViewModel: UpdateViewModel = hiltViewModel()
+            if (!demoActive) {
+                UpdateBanner(updateViewModel)
+            }
             if (demoActive) {
                 CockpitBanner(
                     text = "DEMO - Beispieldaten, keine Verbindung zum Gateway",
@@ -154,6 +166,9 @@ fun CockpitMainScreen(
                                 restoreState = true
                             }
                         },
+                        onOpenDetail = { host, name ->
+                            navController.navigate(ServiceDetailRoute(host, name))
+                        },
                     )
                 }
                 composable<ServicesRoute> {
@@ -171,7 +186,7 @@ fun CockpitMainScreen(
                     InboxScreen()
                 }
                 composable<SettingsRoute> {
-                    SettingsScreen()
+                    SettingsScreen(updateViewModel = updateViewModel)
                 }
             }
         }

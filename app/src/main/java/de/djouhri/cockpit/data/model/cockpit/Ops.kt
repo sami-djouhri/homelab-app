@@ -77,8 +77,8 @@ data class ServiceSummary(
 
     /** Kurzform fuer die Liste, z. B. „laeuft · unhealthy" oder „aus (stopped)". */
     fun zustandsText(): String = when (zustand) {
-        ServiceZustand.LAEUFT -> health?.let { "laeuft · $it" } ?: "laeuft"
-        ServiceZustand.AUFFAELLIG -> if (isRestarting) "startet immer wieder neu" else "laeuft · unhealthy"
+        ServiceZustand.LAEUFT -> health?.let { "läuft · $it" } ?: "läuft"
+        ServiceZustand.AUFFAELLIG -> if (isRestarting) "startet immer wieder neu" else "läuft · unhealthy"
         ServiceZustand.BEWUSST_AUS -> "aus (${expectedState.orEmpty()})"
         ServiceZustand.AUSGEFALLEN -> "$status · soll laufen"
         ServiceZustand.UNBEWERTET -> "$status · keine Erwartung hinterlegt"

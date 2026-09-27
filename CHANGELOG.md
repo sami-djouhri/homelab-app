@@ -1,5 +1,57 @@
 # Changelog
 
+## Die App holt ihre Updates selbst (2026-09-27, 2.0.5)
+
+Bis hierher war der Weg zu einer neuen Version: daran denken, Einstellungen
+öffnen, „Auf Updates prüfen" tippen, der Browser lädt, die APK von Hand
+öffnen. Drei der vier Schritte waren Arbeit für den Nutzer, und der erste war
+der, an dem es scheiterte.
+
+### Update
+- **Die App sieht alle sechs Stunden selbst nach** und meldet sich mit einem
+  Hinweis über allen Flächen. Der Abstand ist Absicht: bei jedem Start zu
+  fragen hieße, bei jedem Start eine Verbindung über WireGuard aufzubauen, die
+  niemand angefordert hat.
+- **Sie lädt die Datei selbst** und **vergleicht die Prüfsumme** mit der
+  angekündigten, bevor sie sie dem Installer übergibt. Vorher stand der Hash in
+  der Oberfläche und wurde nie mit etwas verglichen. Stimmt er nicht, wird die
+  Datei gelöscht statt liegengelassen: eine nicht passende APK im
+  Download-Ordner ist genau das, was beim nächsten Mal jemand von Hand antippt.
+- Nennt das Gateway **keinen** Hash, sagt die App „verglichen wurde nichts"
+  statt ein Häkchen zu zeigen, das nichts bedeutet.
+- „Nicht jetzt" merkt sich genau diese Nummer. Wer von Hand nachsieht, bekommt
+  sie trotzdem wieder: sonst antwortet die App „Aktuell", obwohl sie es nicht
+  ist.
+- Die Herkunftsprüfung bleibt, wie sie war: die APK darf nur vom gekoppelten
+  Gateway kommen (gleiches Schema, gleicher Host, gleicher Port). Über die
+  Echtheit entscheidet weiterhin Androids Signaturprüfung beim Installieren.
+
+### Bedienung
+- **Ein Befund auf der Übersicht ist anklickbar** und führt zu seinem Dienst.
+  Vorher führte die ganze Karte in die Dienstliste, und man suchte den Namen,
+  den man gerade angetippt hatte, noch einmal.
+- **Die Übersicht frischt sich alle 30 Sekunden still auf**, solange sie offen
+  ist, und sagt, von wann ihr Stand ist. Vorher stand dort der Stand vom Öffnen
+  der App, auch nach einer Stunde, und nichts daran sah alt aus.
+
+### Erscheinungsbild
+- **Die Oberfläche schreibt Deutsch mit Umlauten.** „Uebersicht", „auffaellig",
+  „Zurueckgestellt" und dreißig weitere Stellen waren Umschrift.
+- **Die App benutzt wieder ihre eigene Palette.** Mit `dynamicColor = true`
+  ersetzt Android ab Version 12 die gesamten Farben durch eine aus dem
+  Hintergrundbild abgeleitete: die sorgfältig gesetzten Werte in `Color.kt`
+  kamen auf einem aktuellen Telefon nie zum Vorschein. In einem Cockpit trägt
+  Farbe Bedeutung, und ein Hinweis in `primaryContainer` soll nicht je nach
+  Wandbild wie eine Warnung aussehen.
+
+### Nebenbei geprüft
+- Der Vorgabewert von `cockpit.versionCode` stand auf **2**, ausgeliefert war
+  **4**. Ein Bau ohne gesetzte Property hätte ein Downgrade erzeugt, das
+  Android wortlos ablehnt.
+- Signatur der neuen APK gegen die ausgelieferte verglichen (beide
+  `1039220b57be…`): dieses Update legt sich über die installierte App, anders
+  als der Sprung auf 2.0.4.
+
 ## Wahrheit der Anzeige (2026-08-29)
 
 Die App war funktional vollständig und sagte trotzdem drei Dinge, die nicht

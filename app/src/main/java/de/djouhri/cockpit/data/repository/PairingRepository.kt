@@ -51,7 +51,7 @@ class PairingRepository @Inject constructor(
                 "QR ohne CA-Fingerprint - Pinning erforderlich"
             }
             require(CertUtils.fingerprintMatches(payload.caFingerprint, response.caCertPem)) {
-                "CA-Fingerprint stimmt nicht mit dem QR ueberein"
+                "CA-Fingerprint stimmt nicht mit dem QR überein"
             }
 
             settingsStore.savePairing(
