@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Freigegeben wird genau ein Unterordner des eigenen Zwischenspeichers, in dem
+  die geladene Update-APK liegt (UpdateRepository legt sie unter cache/updates
+  ab und raeumt aeltere Versuche vorher weg). Nicht der ganze Cache und schon
+  gar nicht der Datenordner: der FileProvider teilt, worauf man ihn zeigen
+  laesst, und was hier steht, kann der Paket-Installer lesen.
+-->
+<paths>
+    <cache-path
+        name="updates"
+        path="updates/" />
+</paths>
